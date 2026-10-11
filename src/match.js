@@ -1,14 +1,15 @@
+import { getDifficulty } from './config.js';
 import {makePlayers,FIELD as F} from './data.js';
 import {Ball,GRAVITY} from './ball.js';
 import {aiIntent} from './ai.js';
 import {chooseSwitch,moveDirection,targetScore,clamp,distance,sweptContact,interceptionScore} from './gameplay.js';
 export class Match {
- constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=180;this.stepDt=1/60;this.reset();}
+ constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=180;this.stepDt=1/60;this.possessionTime=0;this.reset();}
  reset(){this.score=[0,0];this.time=this.duration;this.state='playing';this.selected=0;this.message='KICK OFF';this.messageTime=2;this.goalDelay=0;this.shotSerial=0;this.kickoff(0);}
  kickoff(team){
   const positions=[[350,325],[255,180],[255,470],[750,325],[845,180],[845,470],[84,325],[1016,325]];
   this.players.forEach((p,i)=>{[p.x,p.y]=positions[i];p.vx=p.vy=0;p.kick=0;p.cooldown=.5;p.keeperAim=325;p.keeperReaction=0;p.seenRelease=null;p.face=p.team?-1:1;});
-  this.ball.reset();this.ball.owner=team?3:0;const p=this.players[this.ball.owner];this.ball.x=p.x+p.face*12;this.ball.y=p.y+8;this.ball.previous={x:this.ball.x,y:this.ball.y,z:0};this.selected=0;this.observedOwner=this.ball.owner;
+  this.ball.reset();this.ball.owner=team?3:0;const p=this.players[this.ball.owner];this.ball.x=p.x+p.face*12;this.ball.y=p.y+8;this.ball.previous={x:this.ball.x,y:this.ball.y,z:0};this.selected=0;this.observedOwner=this.ball.owner;this.possessionTime=this.time;
  }
  selectPlayer(id){
   const p=this.players[id];if(!p||p.team!==0||id===this.selected)return;
@@ -31,8 +32,14 @@ export class Match {
  }
  collectBall(p){
   this.ball.collect(p);this.syncPossessionControl();
+  if (p.team===0) this.possessionTime = this.time;
  }
- passScore(p,q,type='s'){return targetScore(p,q,moveDirection(p,this.input,this.selected),type,this.players);}
+ passScore(p,q,type='s'){
+  let score = targetScore(p,q,moveDirection(p,this.input,this.selected),type,this.players);
+  const config = getDifficulty();
+  if (p.team === 0) score *= config.passAssistance;
+  return score;
+}
  passTarget(p,type){return this.players.filter(q=>q.team===p.team&&q.id!==p.id&&!q.keeper).sort((a,b)=>this.passScore(p,b,type)-this.passScore(p,a,type)||a.id-b.id)[0];}
  action(p,type){
   const b=this.ball;if(p.cooldown>0||b.owner!==p.id)return false;
@@ -81,7 +88,9 @@ export class Match {
   });
   for(const p of this.players){
    const intent=intents[p.id];
-   const possession=this.ball.owner===p.id,maxSpeed=(95+p.stats.speed*1.15)*(possession?.80+p.stats.dribbling*.0018:1),acceleration=320+p.stats.acceleration*5;
+   const possession=this.ball.owner===p.id,maxSpeed=(95+p.stats.speed*1.15)*(possession?.80+p.stats.dribbling*.0018:1);
+   let acceleration=320+p.stats.acceleration*5;
+   if(p.team === 0) acceleration *= 1.35; // Boost human acceleration/turning responsiveness
    const approach=(v,t)=>v+clamp(t-v,-acceleration*dt,acceleration*dt);
    p.vx=approach(p.vx,intent.x*maxSpeed);p.vy=approach(p.vy,intent.y*maxSpeed);
    p.x=clamp(p.x+p.vx*dt,F.left+12,F.right-12);p.y=clamp(p.y+p.vy*dt,F.top+15,F.bottom-15);
@@ -93,9 +102,11 @@ export class Match {
  }
  resolveReceivers(){
   const b=this.ball;if(b.owner!==null)return;const contacts=[];
+  const config = getDifficulty();
   for(const p of this.players){
    if(p.id===b.lastKicker&&b.lock>0)continue;const assisted=b.receiver===p.id&&b.lastTeam===p.team;
-   const radius=p.keeper?27:assisted?25+p.stats.dribbling*.025:19;
+   let radius=p.keeper?27:assisted?25+p.stats.dribbling*.025:19;
+   if(p.team === 0 && assisted) radius *= config.passAssistance; // Boost human receiver radius
    const hit=sweptContact(b,p,radius,p.keeper?62:assisted?20:16);if(hit)contacts.push({p,hit});
   }
   contacts.sort((a,c)=>a.hit.t-c.hit.t||distance(a.p,b)-distance(c.p,b)||a.p.id-c.p.id);
@@ -106,17 +117,32 @@ export class Match {
  }
  resolveTackles(){
   const b=this.ball;if(b.owner===null)return;const owner=this.players[b.owner];if(owner.cooldown>.25)return;
+  const config = getDifficulty();
   for(const p of this.players){
    const d = distance(p,owner);
-   if(p.team===owner.team||p.cooldown>0||d>22)continue;
-   const relative=Math.hypot(p.vx-owner.vx,p.vy-owner.vy),threshold=40+owner.stats.strength*.5+owner.stats.dribbling*.25-p.stats.strength*.3;
-   if(relative>threshold || d<14){
+
+   // Handle protection and reaction times for CPU
+   if(p.team !== 0 && owner.team === 0){
+     if(this.possessionTime - this.time < config.humanPossessionProtection) continue;
+   }
+
+   const maxDist = p.team === 0 ? config.tackleRadius : 22;
+   if(p.team===owner.team||p.cooldown>0||d>maxDist)continue;
+
+   let threshold = 40+owner.stats.strength*.5+owner.stats.dribbling*.25-p.stats.strength*.3;
+   if(p.team !== 0) threshold += config.cpuTackleThresholdMod;
+   else threshold += config.humanTackleThresholdMod;
+
+   const relative=Math.hypot(p.vx-owner.vx,p.vy-owner.vy);
+   const successDist = p.team === 0 ? Math.max(14, config.tackleRadius * 0.75) : 14;
+
+   if(relative>threshold || d<successDist){
     this.collectBall(p);p.cooldown=.65;owner.cooldown=.5;
     if(p.team===0 && p.id===this.selected){this.message='TACKLE!';this.messageTime=0.8;}
     break;
    }else{
     // Unsuccessful tackle attempt within range
-    p.cooldown=0.3;
+    p.cooldown = p.team === 0 ? 0.3 : config.cpuTackleCooldown;
    }
   }
  }

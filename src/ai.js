@@ -1,3 +1,4 @@
+import { getDifficulty } from './config.js';
 import {FIELD as F} from './data.js';
 import {clamp,distance,interceptionPoint,interceptionScore} from './gameplay.js';
 export function aiIntent(p,match){
@@ -19,6 +20,7 @@ export function aiIntent(p,match){
  }
  const squad=match.players.filter(q=>q.team===p.team&&!q.keeper);
  const intended=squad.find(q=>q.id===b.receiver);
+ const config = getDifficulty();
  const chaser=intended??[...squad].sort((a,c)=>interceptionScore(a,b)-interceptionScore(c,b)||a.id-c.id)[0];let target;
  if(b.owner===null&&b.receiver===p.id){target=b.kind==='a'&&b.flightTime>.18?b.landing:interceptionPoint(b,.16);}
  else if(!owner||owner.team!==p.team){
@@ -27,6 +29,11 @@ export function aiIntent(p,match){
  }else target={x:clamp(owner.x+attack*(135+(p.id%2)*95),145,955),y:155+(p.id%3)*170};
  const desired=direction(p,target??b);
  for(const q of squad){if(q.id===p.id)continue;const d=distance(p,q);if(d>0&&d<65){desired.x+=(p.x-q.x)/d*(1-d/65)*1.4;desired.y+=(p.y-q.y)/d*(1-d/65)*1.4;}}
- const n=Math.hypot(desired.x,desired.y);if(n>1){desired.x/=n;desired.y/=n;}return desired;
+ let n=Math.hypot(desired.x,desired.y);if(n>1){desired.x/=n;desired.y/=n;}
+ if(p.team !== 0 && (!owner || owner.team !== p.team)) {
+   desired.x *= config.cpuChasingSpeed;
+   desired.y *= config.cpuChasingSpeed;
+ }
+ return desired;
 }
 function direction(p,t,deadZone=6){const dx=t.x-p.x,dy=t.y-p.y,n=Math.hypot(dx,dy);return n<deadZone?{x:0,y:0}:{x:dx/n*Math.min(1,n/32),y:dy/n*Math.min(1,n/32)};}

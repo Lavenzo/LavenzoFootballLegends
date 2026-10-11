@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Input} from '../src/input.js';
 import {Match} from '../src/match.js';
 import {updateHUD} from '../src/ui.js';
+import {getDifficulty, setDifficulty} from '../src/config.js';
 
 function setup(){
  const events={};const input=new Input({addEventListener:(key,fn)=>events[key]=fn});
@@ -197,4 +198,18 @@ test('TC009: Tackle cooldown prevents repeated instant tackles', ()=>{
  // Should have failed tackle because relative speed is 0 and threshold is high, but d is 18 (not < 14)
  assert.equal(match.ball.owner, 3);
  assert.equal(defender.cooldown, 0.3);
+});
+
+test('TC010: Difficulty presets modify actual gameplay parameters', ()=>{
+
+  setDifficulty('easy');
+  const easyConfig = getDifficulty();
+  assert.equal(easyConfig.tackleRadius, 22);
+
+  setDifficulty('hard');
+  const hardConfig = getDifficulty();
+  assert.equal(hardConfig.tackleRadius, 10);
+
+  // Reset
+  setDifficulty('easy');
 });

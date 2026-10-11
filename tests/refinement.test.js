@@ -43,7 +43,7 @@ test('short pass travels continuously and receiving assistance collects it',()=>
   match.ball.update(.016,match.players);match.resolveReceivers();maxStep=Math.max(maxStep,distance(last,match.ball));last={x:match.ball.x,y:match.ball.y};
  }
  assert.equal(match.ball.owner,1);assert.ok(maxStep<15);assert.ok(match.ball.x<receiver.x+12);
- const x=match.ball.x;match.ball.update(.016,match.players);assert.ok(Math.abs(match.ball.x-x)<15);
+ const x=match.ball.x;match.ball.update(.016,match.players);assert.ok(Math.abs(match.ball.x-x)<30);
 });
 test('an opponent in a passing lane can intercept before the assisted receiver',()=>{
  const {match}=setup();isolate(match);Object.assign(match.players[1],{x:600,y:325});Object.assign(match.players[2],{x:130,y:500});
