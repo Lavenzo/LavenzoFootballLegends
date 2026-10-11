@@ -62,16 +62,23 @@ export class Match {
  }
  update(dt){
   if(this.input.consume('escape')&&['playing','paused'].includes(this.state))this.state=this.state==='paused'?'playing':'paused';if(this.state!=='playing')return;
-  this.stepDt=dt;this.syncPossessionControl();if(this.input.consume('w'))this.switchPlayer();this.messageTime=Math.max(0,this.messageTime-dt);
+  this.stepDt=dt;this.syncPossessionControl();this.messageTime=Math.max(0,this.messageTime-dt);
   if(this.goalDelay>0){this.goalDelay-=dt;if(this.goalDelay<=0)this.kickoff(this.nextKickoff);return;}
   this.time=Math.max(0,this.time-dt);if(this.time===0){this.state='finished';return;}
   for(const p of this.players){p.cooldown=Math.max(0,p.cooldown-dt);p.kick=Math.max(0,p.kick-dt);}
   // Consume each key once for the original actor, then transfer control before choosing movement.
   const actor=this.players[this.selected];let kicked=false;
-  for(const key of ['s','a','d'])if(this.input.consume(key)&&actor&&!kicked)kicked=this.action(actor,key);
+  let s_consumed=this.input.consume('s');if(s_consumed&&actor&&!kicked){if(this.ball.owner===actor.id)kicked=this.action(actor,'s');else this.switchPlayer();}for(const key of ['a','d'])if(this.input.consume(key)&&actor&&!kicked)kicked=this.action(actor,key);
   // Fix the keyboard owner for this movement phase; all other players get only AI intentions.
   const controlled=this.selected;
-  const intents=this.players.map(p=>p.id===controlled?this.input.movement():aiIntent(p,this));
+  const intents=this.players.map(p=>{
+   if(p.id===controlled){
+    const movement = this.input.movement();
+    if(movement.x===0 && movement.y===0 && this.ball.receiver===p.id && this.ball.owner===null) return aiIntent(p,this);
+    return movement;
+   }
+   return aiIntent(p,this);
+  });
   for(const p of this.players){
    const intent=intents[p.id];
    const possession=this.ball.owner===p.id,maxSpeed=(95+p.stats.speed*1.15)*(possession?.80+p.stats.dribbling*.0018:1),acceleration=320+p.stats.acceleration*5;
@@ -100,9 +107,17 @@ export class Match {
  resolveTackles(){
   const b=this.ball;if(b.owner===null)return;const owner=this.players[b.owner];if(owner.cooldown>.25)return;
   for(const p of this.players){
-   if(p.team===owner.team||p.cooldown>0||distance(p,owner)>21)continue;
+   const d = distance(p,owner);
+   if(p.team===owner.team||p.cooldown>0||d>22)continue;
    const relative=Math.hypot(p.vx-owner.vx,p.vy-owner.vy),threshold=40+owner.stats.strength*.5+owner.stats.dribbling*.25-p.stats.strength*.3;
-   if(relative>threshold){this.collectBall(p);p.cooldown=.65;owner.cooldown=.5;break;}
+   if(relative>threshold || d<14){
+    this.collectBall(p);p.cooldown=.65;owner.cooldown=.5;
+    if(p.team===0 && p.id===this.selected){this.message='TACKLE!';this.messageTime=0.8;}
+    break;
+   }else{
+    // Unsuccessful tackle attempt within range
+    p.cooldown=0.3;
+   }
   }
  }
 }

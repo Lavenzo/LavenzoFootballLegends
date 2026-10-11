@@ -7,7 +7,7 @@ import {aiIntent} from '../src/ai.js';
 import {chooseSwitch,layoutLabels,sweptContact,distance} from '../src/gameplay.js';
 function setup(){const events={};const input=new Input({addEventListener:(k,fn)=>events[k]=fn});return {input,events,match:new Match(input)};}
 function isolate(match){for(const p of match.players){p.x=900;p.y=100+p.id*50;p.vx=p.vy=0;p.cooldown=10;}match.players[0].x=300;match.players[0].y=325;match.players[0].cooldown=0;Object.assign(match.ball,{owner:0,x:312,y:333,z:0});}
-test('W chooses nearest available outfield teammate, excludes current and respects possession',()=>{
+test('S chooses nearest available outfield teammate, excludes current and respects possession',()=>{
  const {match}=setup();const b=match.ball;Object.assign(b,{owner:null,x:300,y:180,vx:0,vy:0});
  assert.equal(chooseSwitch(match.players,0,b),1);match.selected=1;assert.notEqual(chooseSwitch(match.players,1,b),1);
  b.owner=2;assert.equal(chooseSwitch(match.players,0,b),2);
@@ -18,14 +18,14 @@ test('defensive switching favours the predicted interception position determinis
  near.stats.speed=interceptor.stats.speed=80;Object.assign(match.ball,{owner:null,x:400,y:300,vx:300,vy:0});
  for(let i=0;i<20;i++)assert.equal(chooseSwitch(match.players,current.id,match.ball),interceptor.id);
 });
-test('held W and browser repeat events produce exactly one switch until release',()=>{
- const {input,events,match}=setup();const key=(repeat=false)=>events.keydown({key:'w',repeat,preventDefault(){}});
+test('held S and browser repeat events produce exactly one switch until release',()=>{
+ const {input,events,match}=setup();match.ball.owner=null;match.ball.x=900;match.ball.y=325;const key=(repeat=false)=>events.keydown({key:'s',repeat,preventDefault(){}});
  key();match.update(.016);const selected=match.selected;
  for(let i=0;i<12;i++){key(true);match.update(.016);assert.equal(match.selected,selected);}
- events.keyup({key:'w'});key();match.update(.016);assert.notEqual(match.selected,selected);
+ events.keyup({key:'s'});key();match.update(.016);assert.notEqual(match.selected,selected);
 });
 test('switching replaces opposing AI momentum and movement starts on the same frame',()=>{
- const {input,match}=setup();match.ball.owner=1;match.observedOwner=1;match.players[1].vy=180;input.keys.add('arrowup');input.pressed.add('w');
+ const {input,match}=setup();match.ball.owner=1;match.observedOwner=1;match.players[1].vy=180;input.keys.add('arrowup');input.pressed.add('s');
  const y=match.players[1].y;match.update(.016);assert.equal(match.selected,1);assert.ok(match.players[1].y<y);
 });
 test('pass targeting follows held movement and AI does not read the human arrow direction',()=>{
