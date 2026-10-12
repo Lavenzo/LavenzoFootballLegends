@@ -4,8 +4,8 @@ import {Ball,GRAVITY} from './ball.js';
 import {aiIntent} from './ai.js';
 import {chooseSwitch,moveDirection,targetScore,clamp,distance,sweptContact,interceptionScore} from './gameplay.js';
 export class Match {
- constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=180;this.stepDt=1/60;this.possessionTime=0;this.reset();}
- reset(){this.score=[0,0];this.time=this.duration;this.state='playing';this.selected=0;this.message='KICK OFF';this.messageTime=2;this.goalDelay=0;this.shotSerial=0;this.kickoff(0);}
+ constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=120;this.stepDt=1/60;this.possessionTime=0;this.goalHistory=[];this.reset();}
+ reset(){this.score=[0,0];this.time=this.duration;this.state='playing';this.selected=0;this.message='KICK OFF';this.messageTime=2;this.goalDelay=0;this.shotSerial=0;this.goalHistory=[];this.kickoff(0);}
  kickoff(team){
   const positions=[[350,325],[255,180],[255,470],[750,325],[845,180],[845,470],[84,325],[1016,325]];
   this.players.forEach((p,i)=>{[p.x,p.y]=positions[i];p.vx=p.vy=0;p.kick=0;p.cooldown=.5;p.keeperAim=325;p.keeperReaction=0;p.seenRelease=null;p.face=p.team?-1:1;});
@@ -108,7 +108,33 @@ export class Match {
    if(p.id!==controlled&&intent.action)this.action(p,intent.action);
   }
   this.ball.update(dt,this.players);this.resolveReceivers();this.resolveTackles();const b=this.ball;
-  if(b.x<F.left-7||b.x>F.right+7){const team=b.x>F.right?0:1;this.score[team]++;this.message='GOAL!';this.messageTime=2.5;this.goalDelay=2.5;this.nextKickoff=1-team;}
+  if(b.x<F.left-7||b.x>F.right+7){
+    if (this.goalDelay <= 0) {
+      const team=b.x>F.right?0:1;this.score[team]++;
+      const elapsed = this.duration - this.time;
+      const m = Math.floor(elapsed / 60);
+      const s = Math.floor(elapsed % 60).toString().padStart(2, '0');
+      const timeFormatted = `${m}:${s}`;
+
+      let scorerName = "Unknown scorer";
+      let scorerId = null;
+      let ownGoal = false;
+      const lastPlayer = this.players[b.lastKicker];
+
+      if (lastPlayer) {
+        scorerName = lastPlayer.name;
+        scorerId = lastPlayer.id;
+        if (lastPlayer.team !== team) {
+          ownGoal = true;
+          scorerName += " (OG)";
+        }
+      }
+
+      this.goalHistory.push({ team, name: scorerName, id: scorerId, timeFormatted, ownGoal });
+      this.message=`GOAL! ${scorerName} — ${timeFormatted}`;
+      this.messageTime=2.5;this.goalDelay=2.5;this.nextKickoff=1-team;
+    }
+  }
  }
  resolveReceivers(){
   const b=this.ball;if(b.owner!==null)return;const contacts=[];
