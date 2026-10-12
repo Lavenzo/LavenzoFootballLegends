@@ -86,11 +86,13 @@ export class Match {
    }
    return aiIntent(p,this);
   });
+  const config = getDifficulty();
   for(const p of this.players){
    const intent=intents[p.id];
    const possession=this.ball.owner===p.id,maxSpeed=(95+p.stats.speed*1.15)*(possession?.80+p.stats.dribbling*.0018:1);
    let acceleration=320+p.stats.acceleration*5;
    if(p.team === 0) acceleration *= 1.35; // Boost human acceleration/turning responsiveness
+   else if (possession) acceleration *= (config.cpuAccelerationMod || 1.0); // Allow human to catch escaping CPU
    const approach=(v,t)=>v+clamp(t-v,-acceleration*dt,acceleration*dt);
    p.vx=approach(p.vx,intent.x*maxSpeed);p.vy=approach(p.vy,intent.y*maxSpeed);
    p.x=clamp(p.x+p.vx*dt,F.left+12,F.right-12);p.y=clamp(p.y+p.vy*dt,F.top+15,F.bottom-15);
@@ -131,14 +133,21 @@ export class Match {
 
    let threshold = 40+owner.stats.strength*.5+owner.stats.dribbling*.25-p.stats.strength*.3;
    if(p.team !== 0) threshold += config.cpuTackleThresholdMod;
-   else threshold += config.humanTackleThresholdMod;
+   else {
+    threshold += config.humanTackleThresholdMod;
+    threshold *= (config.cpuDribblingResistanceMod || 1.0);
+   }
 
    const relative=Math.hypot(p.vx-owner.vx,p.vy-owner.vy);
    const successDist = p.team === 0 ? Math.max(14, config.tackleRadius * 0.75) : 14;
 
    if(relative>threshold || d<successDist){
     this.collectBall(p);p.cooldown=.65;owner.cooldown=.5;
-    if(p.team===0 && p.id===this.selected){this.message='TACKLE!';this.messageTime=0.8;}
+    if(p.team===0){
+      this.message='TACKLE!';this.messageTime=0.8;
+      // Immediately give control to the tackler if they are human
+      this.selectPlayer(p.id);
+    }
     break;
    }else{
     // Unsuccessful tackle attempt within range

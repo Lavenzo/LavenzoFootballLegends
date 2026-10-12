@@ -191,11 +191,11 @@ test('TC009: Tackle cooldown prevents repeated instant tackles', ()=>{
  const defender=match.players[0];
  const opponent=match.players[3];
  Object.assign(defender, {x:300, y:300, cooldown:0, team:0});
- Object.assign(opponent, {x:318, y:300, cooldown:0, team:1, vx:0, vy:0, stats:{strength:100, dribbling:100}});
+ Object.assign(opponent, {x:325, y:300, cooldown:0, team:1, vx:0, vy:0, stats:{strength:100, dribbling:100}});
  defender.stats.strength = 1;
- Object.assign(match.ball, {owner:3, x:318, y:300, z:0});
+ Object.assign(match.ball, {owner:3, x:325, y:300, z:0});
  match.resolveTackles();
- // Should have failed tackle because relative speed is 0 and threshold is high, but d is 18 (not < 14)
+ // Should have failed tackle because relative speed is 0 and threshold is high, but d is 25 (not < 14)
  assert.equal(match.ball.owner, 3);
  assert.equal(defender.cooldown, 0.3);
 });
@@ -204,7 +204,11 @@ test('TC010: Difficulty presets modify actual gameplay parameters', ()=>{
 
   setDifficulty('easy');
   const easyConfig = getDifficulty();
-  assert.equal(easyConfig.tackleRadius, 22);
+  assert.equal(easyConfig.tackleRadius, 29);
+
+  setDifficulty('normal');
+  const normalConfig = getDifficulty();
+  assert.equal(normalConfig.tackleRadius, 16);
 
   setDifficulty('hard');
   const hardConfig = getDifficulty();

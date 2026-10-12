@@ -4,20 +4,24 @@ const DIFFICULTY_LEVELS = {
     cpuReactionDelay: 0.5,
     humanPossessionProtection: 0.5,
     passAssistance: 1.5,
-    tackleRadius: 22,
+    tackleRadius: 29, // Increased ~30% from 22
     cpuChasingSpeed: 0.8,
     cpuTackleThresholdMod: 10,
-    humanTackleThresholdMod: -15,
+    humanTackleThresholdMod: -30, // Much more forgiving
+    cpuDribblingResistanceMod: 0.6, // Reduces CPU resistance
+    cpuAccelerationMod: 0.85, // Slower CPU escaping
   },
   normal: {
     cpuTackleCooldown: 0.8,
     cpuReactionDelay: 0.2,
     humanPossessionProtection: 0.2,
     passAssistance: 1.0,
-    tackleRadius: 14,
+    tackleRadius: 16,
     cpuChasingSpeed: 1.0,
     cpuTackleThresholdMod: 0,
-    humanTackleThresholdMod: 0,
+    humanTackleThresholdMod: -10,
+    cpuDribblingResistanceMod: 0.85,
+    cpuAccelerationMod: 0.95,
   },
   hard: {
     cpuTackleCooldown: 0.5,
@@ -28,6 +32,8 @@ const DIFFICULTY_LEVELS = {
     cpuChasingSpeed: 1.2,
     cpuTackleThresholdMod: -10,
     humanTackleThresholdMod: 10,
+    cpuDribblingResistanceMod: 1.0,
+    cpuAccelerationMod: 1.0,
   }
 };
 
