@@ -15,7 +15,7 @@ export function drawCharacter(c,p,selected,hasBall){
  const bob=moving?Math.abs(Math.cos(phase))*2:Math.sin(phase)*.7;
  c.translate(p.vx*.009,-bob);c.rotate(moving?p.vx*.00012:0);
  const kit=p.keeper?'#b8a5ff':teams[p.team].color,dark=teams[p.team].dark;
- const stocky=p.look==='nazario',broad=p.look==='haaland'||stocky,shoulder=broad?11:9;
+ const stocky=false,broad=p.look==='haaland'||stocky,shoulder=broad?11:9;
  // Articulated knees, shin socks and boots alternate through a running stride.
  for(const side of [-1,1]){
   const stride=run*side,kneeX=side*5+stride*.40,kneeY=4-Math.abs(stride)*.23;
@@ -61,15 +61,15 @@ export function drawCharacter(c,p,selected,hasBall){
   ellipse(0,-49,8,4.5,'#312722');line(-7,-48,-6,-41,'#312722',2.3);
   c.fillStyle='#402d24';c.beginPath();c.moveTo(-7,-39);c.lineTo(-6,-33);c.lineTo(0,-30);c.lineTo(6,-33);c.lineTo(7,-39);c.lineTo(4,-37);c.lineTo(0,-36);c.lineTo(-4,-37);c.fill();
   for(let i=-4;i<=4;i+=2)line(i,-34,i,-32,'#71513a',.65);
- }else if(p.look==='nazario'){
-  ellipse(0,-49,8.8,2.8,'#2c2320');line(-8,-48,-8,-45,'#2c2320',1.7);line(8,-48,8,-45,'#2c2320',1.7);
-  line(-5,-44,-2,-44,'#392820',1.6);line(2,-44,5,-44,'#392820',1.6);
+ }else if(p.look==='mbappe'){
+  // Short cropped dark hair
+  ellipse(0,-49,7.5,3.2,'#1a1513');line(-7,-48,-7,-45,'#1a1513',1.5);line(7,-48,7,-45,'#1a1513',1.5);
  }else ellipse(0,-49,8,3,'#44302a');
- if(!['haaland','zidane','nazario'].includes(p.look)){line(-5,-44,-2,-44,'#34271f',1.2);line(2,-44,5,-44,'#34271f',1.2);}
+ if(!['haaland','zidane'].includes(p.look)){line(-5,-44,-2,-44,'#34271f',1.2);line(2,-44,5,-44,'#34271f',1.2);}
  ellipse(-3.5,-41.5,1.6,1.1,'#fff6e8');ellipse(3.5,-41.5,1.6,1.1,'#fff6e8');
  ellipse(-3.3+p.face*.4,-41.5,.8,1,p.look==='haaland'?'#407a91':'#29201b');ellipse(3.7+p.face*.4,-41.5,.8,1,p.look==='haaland'?'#407a91':'#29201b');
  line(p.face*.5,-41,p.face*1.4,-38,'#a86f4d',.9);
- if(p.look==='ronaldinho'||p.look==='nazario'){ellipse(0,-35.5,3.5,1.7,'#fff2dc');line(-3,-34,3,-34,'#995838',.6);}
+ if(p.look==='ronaldinho'){ellipse(0,-35.5,3.5,1.7,'#fff2dc');line(-3,-34,3,-34,'#995838',.6);}
  else line(-2,-35,2.5,-35,'#93583e',1);
  c.restore();
 }
