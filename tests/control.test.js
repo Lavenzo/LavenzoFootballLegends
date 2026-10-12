@@ -140,7 +140,10 @@ test('tackles and keeper possession transfer control, and restart clears ownersh
 test('HUD immediately reads the receiver selection and no longer displays the passer',()=>{
  const {match}=setup();match.action(match.players[0],'s');
  const nodes=new Map();const previous=globalThis.document;
- globalThis.document={querySelector(selector){if(!nodes.has(selector))nodes.set(selector,{textContent:''});return nodes.get(selector);}};
+ globalThis.document={querySelector(selector){
+    if(!nodes.has(selector))nodes.set(selector,{textContent:'', style:{display:'none'}});
+    return nodes.get(selector);
+ }};
  try{updateHUD(match);assert.match(nodes.get('#selected').textContent,/Lionel Messi/);assert.doesNotMatch(nodes.get('#selected').textContent,/Haaland/);}
  finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
 });
