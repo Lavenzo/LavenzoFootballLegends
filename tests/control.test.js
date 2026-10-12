@@ -197,7 +197,7 @@ test('TC009: Tackle cooldown prevents repeated instant tackles', ()=>{
  match.resolveTackles();
  // Should have failed tackle because relative speed is 0 and threshold is high, but d is 25 (not < 14)
  assert.equal(match.ball.owner, 3);
- assert.equal(defender.cooldown, 0.3);
+ assert.equal(defender.cooldown, 0.1);
 });
 
 test('TC010: Difficulty presets modify actual gameplay parameters', ()=>{
@@ -205,14 +205,41 @@ test('TC010: Difficulty presets modify actual gameplay parameters', ()=>{
   setDifficulty('easy');
   const easyConfig = getDifficulty();
   assert.equal(easyConfig.tackleRadius, 29);
+  assert.equal(easyConfig.humanSpeedMod, 1.25);
 
   setDifficulty('normal');
   const normalConfig = getDifficulty();
   assert.equal(normalConfig.tackleRadius, 16);
+  assert.equal(normalConfig.humanSpeedMod, 1.0);
 
   setDifficulty('hard');
   const hardConfig = getDifficulty();
   assert.equal(hardConfig.tackleRadius, 10);
+  assert.equal(hardConfig.humanSpeedMod, 1.0);
+
+  // Reset
+  setDifficulty('easy');
+});
+
+test('TC011: CPU Speed modifiers impact actual gameplay movement speed on Easy vs Hard', ()=>{
+  // Compare movement speed after 5 frames on Easy vs Hard
+  setDifficulty('easy');
+  const {match: easyMatch} = setup();
+  const easyP = easyMatch.players[3]; // CPU player
+  Object.assign(easyP, {x:500, y:300, team:1});
+  easyMatch.ball.owner = null;
+  for(let i=0; i<5; i++) easyMatch.update(1/60);
+  const easyDist = Math.hypot(500-easyP.x, 300-easyP.y);
+
+  setDifficulty('hard');
+  const {match: hardMatch} = setup();
+  const hardP = hardMatch.players[3];
+  Object.assign(hardP, {x:500, y:300, team:1});
+  hardMatch.ball.owner = null;
+  for(let i=0; i<5; i++) hardMatch.update(1/60);
+  const hardDist = Math.hypot(500-hardP.x, 300-hardP.y);
+
+  assert.ok(easyDist < hardDist, `Expected Easy CPU to move slower than Hard CPU. Easy: ${easyDist}, Hard: ${hardDist}`);
 
   // Reset
   setDifficulty('easy');

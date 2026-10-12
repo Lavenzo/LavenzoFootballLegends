@@ -33,6 +33,7 @@ export class Match {
  collectBall(p){
   this.ball.collect(p);this.syncPossessionControl();
   if (p.team===0) this.possessionTime = this.time;
+  else this.possessionTime = this.time; // Update for CPU as well to track duration
  }
  passScore(p,q,type='s'){
   let score = targetScore(p,q,moveDirection(p,this.input,this.selected),type,this.players);
@@ -89,10 +90,17 @@ export class Match {
   const config = getDifficulty();
   for(const p of this.players){
    const intent=intents[p.id];
-   const possession=this.ball.owner===p.id,maxSpeed=(95+p.stats.speed*1.15)*(possession?.80+p.stats.dribbling*.0018:1);
+   let maxSpeed=(95+p.stats.speed*1.15)*(this.ball.owner===p.id?.80+p.stats.dribbling*.0018:1);
    let acceleration=320+p.stats.acceleration*5;
-   if(p.team === 0) acceleration *= 1.35; // Boost human acceleration/turning responsiveness
-   else if (possession) acceleration *= (config.cpuAccelerationMod || 1.0); // Allow human to catch escaping CPU
+
+   if(p.team === 0) {
+     acceleration *= (config.humanAccelerationMod || 1.35); // Boost human acceleration/turning responsiveness
+     maxSpeed *= (config.humanSpeedMod || 1.0);
+   } else {
+     acceleration *= (config.cpuAccelerationMod || 1.0);
+     maxSpeed *= (config.cpuSpeedMod || 1.0);
+   }
+
    const approach=(v,t)=>v+clamp(t-v,-acceleration*dt,acceleration*dt);
    p.vx=approach(p.vx,intent.x*maxSpeed);p.vy=approach(p.vy,intent.y*maxSpeed);
    p.x=clamp(p.x+p.vx*dt,F.left+12,F.right-12);p.y=clamp(p.y+p.vy*dt,F.top+15,F.bottom-15);
@@ -126,6 +134,7 @@ export class Match {
    // Handle protection and reaction times for CPU
    if(p.team !== 0 && owner.team === 0){
      if(this.possessionTime - this.time < config.humanPossessionProtection) continue;
+     if(this.possessionTime - this.time < config.cpuReactionDelay) continue;
    }
 
    const maxDist = p.team === 0 ? config.tackleRadius : 22;
@@ -151,7 +160,7 @@ export class Match {
     break;
    }else{
     // Unsuccessful tackle attempt within range
-    p.cooldown = p.team === 0 ? 0.3 : config.cpuTackleCooldown;
+    p.cooldown = p.team === 0 ? (config.humanTackleCooldown || 0.3) : config.cpuTackleCooldown;
    }
   }
  }

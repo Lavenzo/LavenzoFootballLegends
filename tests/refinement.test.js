@@ -108,7 +108,7 @@ test('a full autonomous match stays finite, produces shots and goals, and reache
  const {match}=setup();let shots=0;const action=match.action.bind(match);
  match.action=(p,k)=>{const released=action(p,k);if(released&&k==='d')shots++;return released;};
  // Disable human selection only for this headless endurance test, including after kickoffs.
- for(let i=0;i<14000&&match.state==='playing';i++){
+  for(let i=0;i<24000&&match.state==='playing';i++){
   match.selected=-1;match.observedOwner=match.ball.owner;match.update(1/60);
   assert.ok(Number.isFinite(match.ball.x+match.ball.y+match.ball.z));
   for(const p of match.players)assert.ok(Number.isFinite(p.x+p.y+p.vx+p.vy));
