@@ -8,4 +8,7 @@ export const roster = [
  {name:'Kylian Mbappé',number:10,team:1,look:'mbappe',skin:'#8c563b',height:1.02,width:.96,stats:{speed:96,acceleration:99,shooting:96,passing:80,dribbling:94,strength:92}},
 ];
 export const FIELD={w:1100,h:650,left:60,right:1040,top:60,bottom:590,goalTop:259,goalBottom:391};
-export function makePlayers(){return [...roster.map((p,i)=>({...p,stats:{...p.stats},id:i,keeper:false})),...teams.map((t,i)=>({id:6+i,name:i?'Marco Vale':'Theo Sterling',number:1,team:i,look:'keeper',skin:'#e1af87',height:1.06,width:1.03,keeper:true,stats:{speed:72,acceleration:82,shooting:50,passing:82,dribbling:65,strength:88}}))].map(p=>({...p,x:0,y:0,vx:0,vy:0,face:p.team?-1:1,anim:0,kick:0,cooldown:0}));}
+export function makePlayers(draftedRoster){
+  const selectedRoster = draftedRoster || roster;
+  return [...selectedRoster.map((p,i)=>({...p,stats:{...p.stats},id:i,keeper:false})),...teams.map((t,i)=>({id:6+i,name:i?'Marco Vale':'Theo Sterling',number:1,team:i,look:'keeper',skin:'#e1af87',height:1.06,width:1.03,keeper:true,stats:{speed:72,acceleration:82,shooting:50,passing:82,dribbling:65,strength:88}}))].map(p=>({...p,x:0,y:0,vx:0,vy:0,face:p.team?-1:1,anim:0,kick:0,cooldown:0}));
+}

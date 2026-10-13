@@ -14,6 +14,8 @@ class SoundManager {
     this.baseUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : '/';
 
     this.sounds = {
+      menuTheme: new _Audio(`${this.baseUrl}sounds/menu-theme.mp3`),
+      playerSelect: new _Audio(`${this.baseUrl}sounds/player-select.mp3`),
       ambience: new _Audio(`${this.baseUrl}sounds/stadium-ambience.mp3`),
       kick: new _Audio(`${this.baseUrl}sounds/ball-kick.mp3`),
       cheer: new _Audio(`${this.baseUrl}sounds/goal-cheer.mp3`),
@@ -21,7 +23,9 @@ class SoundManager {
       tackle: new _Audio(`${this.baseUrl}sounds/tackle.mp3`),
     };
 
-    // Configure ambience
+    // Configure ambience and menu theme
+    this.sounds.menuTheme.loop = true;
+    this.sounds.menuTheme.volume = this.muted ? 0 : this.masterVolume * 0.35;
     this.sounds.ambience.loop = true;
     this.sounds.ambience.volume = this.muted ? 0 : this.masterVolume * 0.35; // Target around 25-35%
 
@@ -35,6 +39,10 @@ class SoundManager {
         // The game should be in playing state for this to resume properly
         // playAmbience without restart checks if it's paused.
         this.playAmbience();
+      }
+      if (this.pendingMenuTheme) {
+        this.pendingMenuTheme = false;
+        this.playMenuTheme();
       }
     };
     _document.addEventListener('click', unlockAudio);
@@ -58,6 +66,7 @@ class SoundManager {
 
   updateVolumes() {
     const vol = this.muted ? 0 : this.masterVolume;
+    this.sounds.menuTheme.volume = vol * 0.35;
     this.sounds.ambience.volume = vol * 0.35;
     // We update master volume multiplier, handled in playSound
   }
@@ -76,6 +85,36 @@ class SoundManager {
     } catch (e) {
       // Handle gracefully
     }
+  }
+
+  playMenuTheme() {
+    if (!this.audioContextAllowed) {
+      this.pendingMenuTheme = true;
+      return;
+    }
+
+    if (!this.sounds.menuTheme.paused) {
+      return;
+    }
+
+    try {
+      this.updateVolumes();
+      this.sounds.menuTheme.play().catch(e => {
+        this.pendingMenuTheme = true;
+      });
+    } catch(e) {}
+  }
+
+  stopMenuTheme() {
+    this.pendingMenuTheme = false;
+    try {
+      this.sounds.menuTheme.pause();
+      this.sounds.menuTheme.currentTime = 0;
+    } catch(e) {}
+  }
+
+  playPlayerSelect() {
+    this.playSound('playerSelect', 1.0);
   }
 
   playAmbience(restart = false) {
