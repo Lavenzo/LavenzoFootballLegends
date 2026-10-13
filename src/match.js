@@ -5,8 +5,33 @@ import {aiIntent} from './ai.js';
 import {chooseSwitch,moveDirection,targetScore,clamp,distance,sweptContact,interceptionScore} from './gameplay.js';
 import { soundManager } from './audio/SoundManager.js';
 export class Match {
- constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=120;this.stepDt=1/60;this.possessionTime=0;this.goalHistory=[];this.reset();}
- reset(){this.score=[0,0];this.time=this.duration;this.state='playing';this.selected=0;this.message='KICK OFF';this.messageTime=2;this.goalDelay=0;this.shotSerial=0;this.goalHistory=[];this.kickoff(0);}
+ constructor(input){
+  this.input=input;
+  this.draftRoster=null; // Will hold the dynamically drafted players
+  this.players=makePlayers(this.draftRoster);
+  this.ball=new Ball();
+  this.duration=120;
+  this.stepDt=1/60;
+  this.possessionTime=0;
+  this.goalHistory=[];
+  this.draftSelections=[];
+  this.draftTurn=0; // 0: Human, 1: CPU
+  this.reset();
+ }
+ reset(newRoster = null){
+  if (newRoster) this.draftRoster = newRoster;
+  this.players=makePlayers(this.draftRoster);
+  this.score=[0,0];
+  this.time=this.duration;
+  this.state='playing';
+  this.selected=0;
+  this.message='KICK OFF';
+  this.messageTime=2;
+  this.goalDelay=0;
+  this.shotSerial=0;
+  this.goalHistory=[];
+  this.kickoff(0);
+ }
  kickoff(team){
   if (this.time === this.duration) soundManager.playWhistle();
   const positions=[[350,325],[255,180],[255,470],[750,325],[845,180],[845,470],[84,325],[1016,325]];

@@ -50,7 +50,51 @@ export function updateHUD(match){document.querySelector('#home-score').textConte
     if (panel.innerHTML !== html) panel.innerHTML = html;
   }
 }
-export function showOverlay(element,state,match,onPlay,onResume){element.hidden=false;if(state==='menu')element.innerHTML=`<span class="eyebrow">WELCOME TO LEGENDS ARENA</span><h1>Great players.<br><em>Your game.</em></h1><p>Take control of football's icons in a fast, colourful<br>arcade showdown. Two minutes. Everything to play for.</p><div style="margin:15px 0;"><label style="color:#8599ad; font-size:12px; margin-right:8px;">Difficulty:</label><select id="difficulty" style="background:#1a2a3e; color:#e9f2f6; border:1px solid #304055; border-radius:4px; padding:4px 8px;"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></div><button class="primary" id="play">Play Match <span>→</span></button><small>Arrow keys to move · S / A / D to make your mark</small>`;else if(state==='paused')element.innerHTML='<span class="eyebrow">TAKE A BREATHER</span><h1>Match paused</h1><p>Your legends will be here when you’re ready.</p><button class="primary" id="resume">Resume match →</button>';else if(state==='finished'){const result=match.score[0]===match.score[1]?'Honours even.':match.score[0]>match.score[1]?'Legends victorious!':'Icons take the win.';
+export function showOverlay(element,state,match,onPlay,onResume,onDraftPick){element.hidden=false;if(state==='menu')element.innerHTML=`<span class="eyebrow">WELCOME TO LEGENDS ARENA</span><h1>Great players.<br><em>Your game.</em></h1><p>Take control of football's icons in a fast, colourful<br>arcade showdown. Two minutes. Everything to play for.</p><div style="margin:15px 0;"><label style="color:#8599ad; font-size:12px; margin-right:8px;">Difficulty:</label><select id="difficulty" style="background:#1a2a3e; color:#e9f2f6; border:1px solid #304055; border-radius:4px; padding:4px 8px;"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></div><button class="primary" id="start-draft">Start Draft <span>→</span></button><small>Arrow keys to move · S / A / D to make your mark</small>`;else if(state==='draft'){
+  const hTeams = match.draftSelections.filter(s => s.team === 0);
+  const cTeams = match.draftSelections.filter(s => s.team === 1);
+  const isComplete = match.draftSelections.length === 6;
+  const turnText = isComplete ? 'READY TO PLAY' : (match.draftTurn === 0 ? 'YOUR TURN' : 'CPU SELECTING');
+
+  element.innerHTML = `<span class="eyebrow">PLAYER DRAFT</span><h1>${turnText}</h1>
+  <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+    <div style="flex:1; text-align:left; border-right: 1px solid #304055; padding-right:10px;">
+      <h3 style="color:#30ddba;">${teams[0].name}</h3>
+      <ul style="list-style:none; padding:0; font-size:14px;">${[0,1,2].map(i => `<li style="padding:4px 0; color:${hTeams[i] ? '#fff' : '#576275'};">${hTeams[i] ? hTeams[i].player.name : 'Empty Slot'}</li>`).join('')}</ul>
+    </div>
+    <div style="flex:1; text-align:right; padding-left:10px;">
+      <h3 style="color:#ffae58;">${teams[1].name}</h3>
+      <ul style="list-style:none; padding:0; font-size:14px;">${[0,1,2].map(i => `<li style="padding:4px 0; color:${cTeams[i] ? '#fff' : '#576275'};">${cTeams[i] ? cTeams[i].player.name : 'Empty Slot'}</li>`).join('')}</ul>
+    </div>
+  </div>
+  <div class="cards" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin-bottom: 20px;">
+    ${roster.map((p, i) => {
+      const isSelected = match.draftSelections.find(s => s.player.name === p.name);
+      let borderStyle = '1px solid #304055';
+      let opacity = 1;
+      let cursor = 'pointer';
+      if (isSelected) {
+        borderStyle = `2px solid ${isSelected.team === 0 ? '#30ddba' : '#ffae58'}`;
+        opacity = 0.5;
+        cursor = 'default';
+      }
+      return `<article class="player-card draft-card" data-idx="${i}" style="border:${borderStyle}; opacity:${opacity}; cursor:${cursor}; transform: scale(0.85); margin:-10px;">
+        <div class="card-top"><span>#${p.number}</span></div>
+        <h3 style="font-size:16px;">${p.name}</h3>
+      </article>`;
+    }).join('')}
+  </div>
+  <button class="primary" id="play" ${isComplete ? '' : 'disabled'}>Start Match <span>→</span></button>`;
+
+  const draftCards = element.querySelectorAll('.draft-card');
+  draftCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.getAttribute('data-idx'), 10);
+      if (onDraftPick) onDraftPick(idx);
+    });
+  });
+
+}else if(state==='paused')element.innerHTML='<span class="eyebrow">TAKE A BREATHER</span><h1>Match paused</h1><p>Your legends will be here when you’re ready.</p><button class="primary" id="resume">Resume match →</button>';else if(state==='finished'){const result=match.score[0]===match.score[1]?'Honours even.':match.score[0]>match.score[1]?'Legends victorious!':'Icons take the win.';
 let historyHTML='';
 if (match.goalHistory && match.goalHistory.length > 0) {
   historyHTML += '<div class="goal-history" style="margin: 15px 0; max-height: 150px; overflow-y: auto; text-align: left; background: #0c1c2c; padding: 10px; border-radius: 4px; font-size: 14px; border: 1px solid #243d46;">';
@@ -72,7 +116,8 @@ if (match.goalHistory && match.goalHistory.length > 0) {
   }
   historyHTML += '</div>';
 }
-element.innerHTML=`<span class="eyebrow">FULL TIME</span><h1>${result}</h1><div class="final-score">${match.score[0]} <span>:</span> ${match.score[1]}</div><p>Lavenzo Legends vs World Icons</p>${historyHTML}<button class="primary" id="play">Play again →</button>`;}else{element.hidden=true;element.innerHTML='';}element.querySelector('#play')?.addEventListener('click',onPlay);
+element.innerHTML=`<span class="eyebrow">FULL TIME</span><h1>${result}</h1><div class="final-score">${match.score[0]} <span>:</span> ${match.score[1]}</div><p>Lavenzo Legends vs World Icons</p>${historyHTML}<button class="primary" id="restart-draft">Play again →</button>`;}else{element.hidden=true;element.innerHTML='';}
+element.querySelector('#play')?.addEventListener('click',onPlay);
 const diffSelect = element.querySelector('#difficulty');
 if(diffSelect){
   diffSelect.value = getDifficultyName();
