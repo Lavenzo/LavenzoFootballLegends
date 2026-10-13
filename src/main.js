@@ -5,7 +5,7 @@ import {Renderer} from './renderer.js';
 import {createUI,updateHUD,showOverlay} from './ui.js';
 import { soundManager } from './audio/SoundManager.js';
 const ui=createUI(),input=new Input(),match=new Match(input),renderer=new Renderer(ui.canvas);match.state='menu';let previousState='',last=performance.now();
-function play(){input.clear();match.reset();input.active=true;ui.canvas.focus();soundManager.playAmbience();}
+function play(){input.clear();match.reset();input.active=true;ui.canvas.focus();soundManager.playAmbience(true);}
 function resume(){input.clear();match.state='playing';ui.canvas.focus();soundManager.resumeAmbience();}
 document.querySelector('#pause').addEventListener('click',()=>{if(match.state==='playing'){match.state='paused';soundManager.pauseAmbience();}else if(match.state==='paused')resume();});
 document.querySelector('#restart').addEventListener('click',play);

@@ -145,3 +145,63 @@ test('Mute controls toggle audio', () => {
   soundManager.playKick();
   assert.equal(playedAudio.length, 0, 'Muted effects should not play');
 });
+
+test('Ambience playback logic', () => {
+  setup();
+
+  // Test starting ambience (not playing)
+  soundManager.sounds.ambience.paused = true;
+  soundManager.sounds.ambience.currentTime = 50;
+
+  // Calling without restart doesn't reset time
+  soundManager.playAmbience(false);
+  assert.equal(soundManager.sounds.ambience.currentTime, 50, 'Non-restart should not reset time');
+  assert.ok(!soundManager.sounds.ambience.paused);
+
+  // Calling when already playing without restart should not re-play
+  let countBefore = playedAudio.length;
+  soundManager.playAmbience(false);
+  assert.equal(playedAudio.length, countBefore, 'Should not play again if already playing');
+
+  // Calling with restart resets time
+  soundManager.playAmbience(true);
+  assert.equal(soundManager.sounds.ambience.currentTime, 0, 'Restart should reset time');
+});
+
+test('Goal cheer timeout clears safely', () => {
+  setup();
+
+  // Mock setTimeout/clearTimeout to test tracking
+  const originalSetTimeout = global.setTimeout;
+  const originalClearTimeout = global.clearTimeout;
+
+  let clearedCount = 0;
+  // Node tests might use their own environment mapping
+  soundManager.cheerTimeout = 999;
+
+  const originalClear = globalThis.clearTimeout;
+  const originalClear2 = clearTimeout;
+
+  globalThis.clearTimeout = (id) => {
+    if (id === 999) clearedCount++;
+  };
+  clearTimeout = (id) => {
+    if (id === 999) clearedCount++;
+  };
+
+  try {
+    // Need to trigger playGoalCheer but make sure it isn't blocked by muted/context
+    soundManager.audioContextAllowed = true;
+    soundManager.muted = false;
+    soundManager.playGoalCheer();
+
+    assert.equal(clearedCount, 1, 'Should clear previous cheer timeout before setting new one');
+  } finally {
+    globalThis.clearTimeout = originalClear;
+    clearTimeout = originalClear2;
+    if (soundManager.cheerTimeout) {
+      originalClear(soundManager.cheerTimeout);
+    }
+    soundManager.cheerTimeout = null;
+  }
+});

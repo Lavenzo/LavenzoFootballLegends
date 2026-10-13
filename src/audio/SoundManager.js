@@ -30,6 +30,12 @@ class SoundManager {
       this.audioContextAllowed = true;
       _document.removeEventListener('click', unlockAudio);
       _document.removeEventListener('keydown', unlockAudio);
+      if (this.pendingAmbience) {
+        this.pendingAmbience = false;
+        // The game should be in playing state for this to resume properly
+        // playAmbience without restart checks if it's paused.
+        this.playAmbience();
+      }
     };
     _document.addEventListener('click', unlockAudio);
     _document.addEventListener('keydown', unlockAudio);
@@ -72,30 +78,49 @@ class SoundManager {
     }
   }
 
-  playAmbience() {
-    if (!this.audioContextAllowed) return;
+  playAmbience(restart = false) {
+    if (!this.audioContextAllowed) {
+      this.pendingAmbience = true;
+      return;
+    }
+
+    if (!restart && !this.sounds.ambience.paused) {
+      // Already playing continuously, do not restart
+      return;
+    }
+
     try {
-      this.sounds.ambience.currentTime = 0;
+      if (restart) this.sounds.ambience.currentTime = 0;
       this.updateVolumes();
-      this.sounds.ambience.play().catch(e => {});
+      this.sounds.ambience.play().catch(e => {
+        // Browser might block autoplay temporarily
+        this.pendingAmbience = true;
+      });
     } catch(e) {}
   }
 
   pauseAmbience() {
+    this.pendingAmbience = false;
     try {
       this.sounds.ambience.pause();
     } catch(e) {}
   }
 
   resumeAmbience() {
-    if (!this.audioContextAllowed) return;
+    if (!this.audioContextAllowed) {
+      this.pendingAmbience = true;
+      return;
+    }
     try {
       this.updateVolumes();
-      this.sounds.ambience.play().catch(e => {});
+      this.sounds.ambience.play().catch(e => {
+        this.pendingAmbience = true;
+      });
     } catch(e) {}
   }
 
   stopAmbience() {
+    this.pendingAmbience = false;
     try {
       this.sounds.ambience.pause();
       this.sounds.ambience.currentTime = 0;
@@ -123,11 +148,16 @@ class SoundManager {
     const vol = this.muted ? 0 : this.masterVolume;
     this.sounds.ambience.volume = vol * 0.1;
 
+    if (this.cheerTimeout) {
+      globalThis.clearTimeout(this.cheerTimeout);
+    }
+
     // Restore ambience after 5 seconds (approx cheer length)
-    setTimeout(() => {
+    this.cheerTimeout = globalThis.setTimeout(() => {
       if (this.sounds.ambience && !this.sounds.ambience.paused) {
         this.updateVolumes();
       }
+      this.cheerTimeout = null;
     }, 5000);
   }
 }
