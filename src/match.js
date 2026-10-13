@@ -3,10 +3,12 @@ import {makePlayers,FIELD as F} from './data.js';
 import {Ball,GRAVITY} from './ball.js';
 import {aiIntent} from './ai.js';
 import {chooseSwitch,moveDirection,targetScore,clamp,distance,sweptContact,interceptionScore} from './gameplay.js';
+import { soundManager } from './audio/SoundManager.js';
 export class Match {
  constructor(input){this.input=input;this.players=makePlayers();this.ball=new Ball();this.duration=120;this.stepDt=1/60;this.possessionTime=0;this.goalHistory=[];this.reset();}
  reset(){this.score=[0,0];this.time=this.duration;this.state='playing';this.selected=0;this.message='KICK OFF';this.messageTime=2;this.goalDelay=0;this.shotSerial=0;this.goalHistory=[];this.kickoff(0);}
  kickoff(team){
+  if (this.time === this.duration) soundManager.playWhistle();
   const positions=[[350,325],[255,180],[255,470],[750,325],[845,180],[845,470],[84,325],[1016,325]];
   this.players.forEach((p,i)=>{[p.x,p.y]=positions[i];p.vx=p.vy=0;p.kick=0;p.cooldown=.5;p.keeperAim=325;p.keeperReaction=0;p.seenRelease=null;p.face=p.team?-1:1;});
   this.ball.reset();this.ball.owner=team?3:0;const p=this.players[this.ball.owner];this.ball.x=p.x+p.face*12;this.ball.y=p.y+8;this.ball.previous={x:this.ball.x,y:this.ball.y,z:0};this.selected=0;this.observedOwner=this.ball.owner;this.possessionTime=this.time;
@@ -66,7 +68,9 @@ export class Match {
   const humanKick=p.team===0&&p.id===this.selected;
   b.launch(p,target,power,lift,options);p.cooldown=.5;this.observedOwner=null;
   if(humanKick&&options.receiver!==undefined)this.selectPlayer(options.receiver);
-  this.message=type==='a'?'LOFTED CROSS':type==='s'?'SHORT PASS':'SHOT!';this.messageTime=.8;return true;
+  this.message=type==='a'?'LOFTED CROSS':type==='s'?'SHORT PASS':'SHOT!';this.messageTime=.8;
+  soundManager.playKick();
+  return true;
  }
  update(dt){
   if(this.input.consume('escape')&&['playing','paused'].includes(this.state))this.state=this.state==='paused'?'playing':'paused';if(this.state!=='playing')return;
@@ -133,6 +137,7 @@ export class Match {
       this.goalHistory.push({ team, name: scorerName, id: scorerId, timeFormatted, ownGoal });
       this.message=`GOAL! ${scorerName} — ${timeFormatted}`;
       this.messageTime=2.5;this.goalDelay=2.5;this.nextKickoff=1-team;
+      soundManager.playGoalCheer();
     }
   }
  }
@@ -183,6 +188,7 @@ export class Match {
       // Immediately give control to the tackler if they are human
       this.selectPlayer(p.id);
     }
+    soundManager.playTackle();
     break;
    }else{
     // Unsuccessful tackle attempt within range
